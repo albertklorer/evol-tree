@@ -203,21 +203,19 @@ class DecisionTree:
                 count = count + 1
         return count/len(Y_pred)
 
-clf1 = DecisionTree()
+tree = DecisionTree()
 
-x = np.array([[0,0],
-              [0,1],
-              [1,0],
-              [1,1]])
+iris = np.genfromtxt('iris.csv', delimiter=',')
+np.random.shuffle(iris)
+iris_train = iris[0:100]
+iris_test = iris[101:]
 
-y = np.array([0,
-              1,
-              1,
-              1]) 
-clf1.fit(x,y)
-Y_pred = clf1.predict(x)
+x_train = iris_train[:, 0:3]
+y_train = iris_train[:, 4]
+x_test = iris_test[:, 0:3]
+y_test = iris_test[:, 4]
+tree.fit(x_train,y_train)
+Y_pred = tree.predict(x_train)
 print("Predictions :",Y_pred)
 print()
-print("Score :",clf1.score(x,y)) # Score on training data
-print()
-print("DOT DATA :-",clf1.export_tree_pdf(filename="tree_OR.pdf"))
+print("Score :",tree.score(x_test,y_test)) # Score on training data
