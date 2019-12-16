@@ -64,7 +64,7 @@ class DecisionTree:
         for i in values:
             df1 = df[df[feature] == i]
             current_size = df1.shape[0]
-            info_f += (current_size/initial_size)*self.__entropy(df1[df1.shape[1]-1])
+            info_f += (current_size/initial_size)*self.entropy(df1[df1.shape[1]-1])
             split_info += (-current_size/initial_size)*math.log2(current_size/initial_size)
 
         # to handle the case when split info = 0 which leads to division by 0 error
@@ -76,7 +76,7 @@ class DecisionTree:
         return gain_ratio
 
     # returns root of decision tree built after fitting training data
-    def __decision_tree(self,X,Y,features,level,classes):
+    def decision_tree(self,X,Y,features,level,classes):
         # If the node consists of only 1 class
         if len(set(Y)) == 1:
             print("Level",level)
@@ -140,7 +140,7 @@ class DecisionTree:
                     max_count = freq_map[i]
                 print("Count of",i,"=",freq_map[i])
    
-        print("Current Entropy is =",self.__entropy(Y))
+        print("Current Entropy is =",self.entropy(Y))
         print("Splitting on feature  X[",final_feature,"] with gain ratio ",max_gain,sep="")
         print()
 
@@ -173,14 +173,26 @@ class DecisionTree:
         features = [i for i in range(len(X[0]))]
         classes = set(Y)
         level = 0
-        self.__root = self.__decision_tree(X,Y,features,level,classes)
+        self.root = self.decision_tree(X,Y,features,level,classes)
 
     # returns prediciton based on predictor values
     def predict(self,X):
         Y = np.array([0 for i in range(len(X))])
         for i in range(len(X)):
-            Y[i] = self.__predict_for(X[i],self.__root)
+            Y[i] = self.predict_for(X[i],self.root)
         return Y
+
+    # predicts the class for a given testing point and returns the answer
+    def predict_for(self,data,node):
+        if len(node.children) == 0 :
+            return node.output
+        # represents the value of feature on which the split was made  
+        val = data[node.feature]    
+        if val not in node.children :
+            return node.output
+        
+        # Recursively call on the splits
+        return self.predict_for(data,node.children[val])
 
     # returns the mean accuracy of test set
     def score(self,X,Y):
