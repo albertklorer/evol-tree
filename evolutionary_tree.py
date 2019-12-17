@@ -28,7 +28,6 @@ class DecisionTree:
     """
     def __init__(self):
         self.root = None
-        self.age = 0
 
     # helper function to count unique values of each class
     def count_unique_values(self, Y):
@@ -79,41 +78,26 @@ class DecisionTree:
     def decision_tree(self,X,Y,features,level,classes):
         # If the node consists of only 1 class
         if len(set(Y)) == 1:
-            print("Level",level)
             output = None
             for i in classes:
                 if i in Y:
                     output = i
-                    print("Count of",i,"=",len(Y))
-                else :
-                    print("Count of",i,"=",0)
-            print("Current Entropy is =  0.0")
-
-            print("Reached leaf Node")
+                    
             return Node(None,output)
 
         # If we have run out of features to split upon
         # In this case we will output the class with maximum count
         if len(features) == 0:
-            print("Level",level)
             freq_map = self.count_unique_values(Y)
             output = None
             max_count = -math.inf
             for i in classes:
-                if i not in freq_map:
-                    print("Count of",i,"=",0)
-                else :
+                if i in freq_map :
                     if freq_map[i] > max_count :
                         output = i
                         max_count = freq_map[i]
-                    print("Count of",i,"=",freq_map[i])
 
-
-            print("Current Entropy  is =",self.entropy(Y))     
-
-            print("Reached leaf Node")
             return Node(None,output)
-
         
         # Finding the best feature to split upon
         max_gain = -math.inf
@@ -126,25 +110,15 @@ class DecisionTree:
                 max_gain = current_gain
                 final_feature = f
 
-        print("Level",level)
         freq_map = self.count_unique_values(Y)
         output = None
         max_count = -math.inf
 
         for i in classes:
-            if i not in freq_map:
-                print("Count of",i,"=",0)
-            else :
+            if i in freq_map:
                 if freq_map[i] > max_count :
                     output = i
                     max_count = freq_map[i]
-                print("Count of",i,"=",freq_map[i])
-   
-        print("Current Entropy is =",self.entropy(Y))
-        print("Splitting on feature  X[",final_feature,"] with gain ratio ",max_gain,sep="")
-        print()
-
-
             
         unique_values = set(X[:,final_feature]) # unique_values represents the unique values of the feature selected
         df = pd.DataFrame(X)
@@ -203,6 +177,67 @@ class DecisionTree:
                 count = count + 1
         return count/len(Y_pred)
 
+class EvolutionaryForest():
+    """
+    Represents evolutionary forest
+    """
+    def __init__(self, population_size=10, mutation_rate=0.03, iterations=100):
+        self.population_size = population_size
+        self.mutation_rate = mutation_rate
+        self.iterations = iterations
+        self.population = []
+        self.population_fitness = []
+    
+    # helper function to shuffle random subsample of X and Y at same indices
+    def shuffle(self, X, Y):
+        randomize = np.arange(len(Y))
+        np.random.shuffle(randomize)
+        X = X[randomize]
+        Y = Y[randomize]
+        subsample_length = np.random.randint(int(len(Y) / 2), len(Y))
+        X = X[:subsample_length, :]
+        Y = Y[:subsample_length]
+        return X, Y
+
+    # helper function to find fitness values of population
+    def evaluate_fitness(self, X_test, Y_test):
+        if len(self.population_fitness) is 0:
+            for i in range(self.population_size):
+                self.population_fitness.append(self.population[i].score(X_test, Y_test))
+        else:
+            for i in range(self.population_size):
+                self.population_fitness[i] = self.population[i].score(X_test, Y_test)
+    
+    # helper function to return best parents of population
+    def mating_pool(self, population_fitness):
+        parents = []
+        
+        for i in range(int(self.population_size / 2)):
+            max_fitness = 0
+            max_index = -1
+            for j in range(len(population_fitness)):
+                if population_fitness[j] > max_fitness:
+                    max_fitness = population_fitness[j]
+                    max_index = j
+            del population_fitness[max_index]
+            parents.append(self.population[max_index])
+        
+        return parents
+
+    # helper function to generate a population based on training data and 
+    def generate_population(self, X_train, Y_train, X_test, Y_test):
+        # generate from scratch if population is 0 
+        if len(self.population) is 0:
+            for i in range(self.population_size):
+                shuffle_X, shuffle_Y = self.shuffle(X_train, Y_train)
+                decision_tree = DecisionTree()
+                decision_tree.fit(shuffle_X, shuffle_Y)
+                self.population.append(decision_tree)
+        
+
+    
+
+    
 tree = DecisionTree()
 
 iris = np.genfromtxt('iris.csv', delimiter=',')
@@ -210,12 +245,22 @@ np.random.shuffle(iris)
 iris_train = iris[0:100]
 iris_test = iris[101:]
 
-x_train = iris_train[:, 0:3]
+x_train = iris_train[:, 0:4]
 y_train = iris_train[:, 4]
-x_test = iris_test[:, 0:3]
+x_test = iris_test[:, 0:4]
 y_test = iris_test[:, 4]
 tree.fit(x_train,y_train)
 Y_pred = tree.predict(x_train)
-print("Predictions :",Y_pred)
-print()
+evolutionary_tree = EvolutionaryForest()
+evolutionary_tree.generate_population(x_train, y_train, x_train, y_train)
+evolutionary_tree.evaluate_fitness(x_test, y_test)
+print(evolutionary_tree.population_fitness)
+print(evolutionary_tree.mating_pool(evolutionary_tree.population_fitness))
+
+print(len(evolutionary_tree.population))
+
+# for child in tree.root.children:
+    # print(tree.root.children[child].children)
+# print("Predictions :",Y_pred)
+# print()
 print("Score :",tree.score(x_test,y_test)) # Score on training data
