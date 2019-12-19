@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
+import random
 
 class Node:
     """
@@ -180,7 +181,7 @@ class EvolutionaryForest():
     """
     Represents evolutionary forest
     """
-    def __init__(self, population_size=4, mutation_rate=0.5, iterations=10):
+    def __init__(self, population_size=100, mutation_rate=0.001, iterations=20):
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self.iterations = iterations
@@ -230,15 +231,19 @@ class EvolutionaryForest():
             parent_2 = parents[np.random.randint(len(parents))]
 
             # reroll parent_2 until it does not match parent_1
-            while parent_1 is parent_2:
-                parent_2 = parents[np.random.randint(len(parents))]
+            parent_2 = parents[np.random.randint(len(parents))]
 
             # iterate through children nodes of first parent 
-            for j in range(len(parent_1.root.children)):
+            for child in list(parent_1.root.children):
                 # roll based on mutation_rate value
                 if np.random.uniform() < self.mutation_rate:
-                    parent_1.root.children[j] = np.random.choice(parent_2.root.children)
+                    try:
+                        random_node = parent_2.root.children.popitem()[1]
+                        parent_1.root.children[child] = random_node
+                    except Exception:
+                        continue
 
+                    
             children.append(parent_1)
 
         self.population = children
@@ -255,11 +260,12 @@ class EvolutionaryForest():
             self.evaluate_fitness(X_test, Y_test)
         # repeat for specified number of iterations
         for i in range(self.iterations):
+            #print(i)
+            #print(self.population_fitness)
             mating_pool = self.mating_pool(self.population_fitness)
             self.create_children(mating_pool, len(self.population))
             self.evaluate_fitness(X_test, Y_test)
-            print(i)
-            print(self.population_fitness)
+            
         
 
     
@@ -282,8 +288,6 @@ evolutionary_tree = EvolutionaryForest()
 evolutionary_tree.fit(x_train, y_train, x_test, y_test)
 print(evolutionary_tree.population_fitness)
 population = evolutionary_tree.create_children(evolutionary_tree.mating_pool(evolutionary_tree.population_fitness), evolutionary_tree.population_size)
-for member in population: 
-    print(member.score(x_test, y_test))
 
 print(len(evolutionary_tree.population))
 
