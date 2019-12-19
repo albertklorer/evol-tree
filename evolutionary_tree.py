@@ -24,7 +24,6 @@ class DecisionTree:
     """
         Represents decision tree
         root: root node of decision tree
-        age: size of decision tree
     """
     def __init__(self):
         self.root = None
@@ -181,7 +180,7 @@ class EvolutionaryForest():
     """
     Represents evolutionary forest
     """
-    def __init__(self, population_size=10, mutation_rate=0.03, iterations=100):
+    def __init__(self, population_size=4, mutation_rate=0.5, iterations=10):
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self.iterations = iterations
@@ -201,18 +200,17 @@ class EvolutionaryForest():
 
     # helper function to find fitness values of population
     def evaluate_fitness(self, X_test, Y_test):
-        if len(self.population_fitness) is 0:
-            for i in range(self.population_size):
+        if len(self.population_fitness) < len(self.population):
+            for i in range(len(self.population) - len(self.population_fitness)):
                 self.population_fitness.append(self.population[i].score(X_test, Y_test))
         else:
-            for i in range(self.population_size):
+            for i in range(len(self.population)):
                 self.population_fitness[i] = self.population[i].score(X_test, Y_test)
     
     # helper function to return best parents of population
     def mating_pool(self, population_fitness):
         parents = []
-        
-        for i in range(int(self.population_size / 2)):
+        for i in range(int(self.population_size / 3)):
             max_fitness = 0
             max_index = -1
             for j in range(len(population_fitness)):
@@ -224,8 +222,29 @@ class EvolutionaryForest():
         
         return parents
 
-    # helper function to generate a population based on training data and 
-    def generate_population(self, X_train, Y_train, X_test, Y_test):
+    # helper function to create children of parent population 
+    def create_children(self, parents, children_size):
+        children = []
+        for i in range(children_size):
+            parent_1 = parents[np.random.randint(len(parents))]
+            parent_2 = parents[np.random.randint(len(parents))]
+
+            # reroll parent_2 until it does not match parent_1
+            while parent_1 is parent_2:
+                parent_2 = parents[np.random.randint(len(parents))]
+
+            # iterate through children nodes of first parent 
+            for j in range(len(parent_1.root.children)):
+                # roll based on mutation_rate value
+                if np.random.uniform() < self.mutation_rate:
+                    parent_1.root.children[j] = np.random.choice(parent_2.root.children)
+
+            children.append(parent_1)
+
+        self.population = children
+
+    # generate a population based on training and testing data 
+    def fit(self, X_train, Y_train, X_test, Y_test):
         # generate from scratch if population is 0 
         if len(self.population) is 0:
             for i in range(self.population_size):
@@ -233,6 +252,14 @@ class EvolutionaryForest():
                 decision_tree = DecisionTree()
                 decision_tree.fit(shuffle_X, shuffle_Y)
                 self.population.append(decision_tree)
+            self.evaluate_fitness(X_test, Y_test)
+        # repeat for specified number of iterations
+        for i in range(self.iterations):
+            mating_pool = self.mating_pool(self.population_fitness)
+            self.create_children(mating_pool, len(self.population))
+            self.evaluate_fitness(X_test, Y_test)
+            print(i)
+            print(self.population_fitness)
         
 
     
@@ -252,15 +279,16 @@ y_test = iris_test[:, 4]
 tree.fit(x_train,y_train)
 Y_pred = tree.predict(x_train)
 evolutionary_tree = EvolutionaryForest()
-evolutionary_tree.generate_population(x_train, y_train, x_train, y_train)
-evolutionary_tree.evaluate_fitness(x_test, y_test)
+evolutionary_tree.fit(x_train, y_train, x_test, y_test)
 print(evolutionary_tree.population_fitness)
-print(evolutionary_tree.mating_pool(evolutionary_tree.population_fitness))
+population = evolutionary_tree.create_children(evolutionary_tree.mating_pool(evolutionary_tree.population_fitness), evolutionary_tree.population_size)
+for member in population: 
+    print(member.score(x_test, y_test))
 
 print(len(evolutionary_tree.population))
 
 # for child in tree.root.children:
-    # print(tree.root.children[child].children)
+#     print(tree.root.children[child].feature)
 # print("Predictions :",Y_pred)
 # print()
-print("Score :",tree.score(x_test,y_test)) # Score on training data
+# print("Score :",tree.score(x_test,y_test)) # Score on training data
